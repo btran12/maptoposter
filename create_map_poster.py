@@ -29,24 +29,29 @@ def load_fonts():
     # Verify fonts exist
     for weight, path in fonts.items():
         if not os.path.exists(path):
-            print(f"⚠ Font not found: {path}")
+            print(f"Warning: Font not found: {path}")
             return None
     
     return fonts
 
 FONTS = load_fonts()
 
-def generate_output_filename(city, theme_name):
+def generate_output_filename(city, theme_name, distance):
     """
-    Generate unique output filename with city, theme, and datetime.
+    Generate unique output filename with city, theme, distance, and datetime.
+    Saves files in a folder named after the city.
     """
     if not os.path.exists(POSTERS_DIR):
         os.makedirs(POSTERS_DIR)
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     city_slug = city.lower().replace(' ', '_')
-    filename = f"{city_slug}_{theme_name}_{timestamp}.png"
-    return os.path.join(POSTERS_DIR, filename)
+    city_dir = os.path.join(POSTERS_DIR, city_slug)
+    if not os.path.exists(city_dir):
+        os.makedirs(city_dir)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{theme_name}_{distance}m_{timestamp}.png"
+    return os.path.join(city_dir, filename)
 
 def get_available_themes():
     """
@@ -70,7 +75,7 @@ def load_theme(theme_name="feature_based"):
     theme_file = os.path.join(THEMES_DIR, f"{theme_name}.json")
     
     if not os.path.exists(theme_file):
-        print(f"⚠ Theme file '{theme_file}' not found. Using default feature_based theme.")
+        print(f"Warning: Theme file '{theme_file}' not found. Using default feature_based theme.")
         # Fallback to embedded default theme
         return {
             "name": "Feature-Based Shading",
@@ -89,7 +94,7 @@ def load_theme(theme_name="feature_based"):
     
     with open(theme_file, 'r') as f:
         theme = json.load(f)
-        print(f"✓ Loaded theme: {theme.get('name', theme_name)}")
+        print(f"Loaded theme: {theme.get('name', theme_name)}")
         if 'description' in theme:
             print(f"  {theme['description']}")
         return theme
@@ -207,8 +212,8 @@ def get_coordinates(city, country):
     location = geolocator.geocode(f"{city}, {country}")
     
     if location:
-        print(f"✓ Found: {location.address}")
-        print(f"✓ Coordinates: {location.latitude}, {location.longitude}")
+        print(f"Found: {location.address}")
+        print(f"Coordinates: {location.latitude}, {location.longitude}")
         return (location.latitude, location.longitude)
     else:
         raise ValueError(f"Could not find coordinates for {city}, {country}")
@@ -241,7 +246,7 @@ def create_poster(city, country, point, dist, output_file):
             parks = None
         pbar.update(1)
     
-    print("✓ All data downloaded successfully!")
+    print("All data downloaded successfully!")
     
     # 2. Setup Plot
     print("Rendering map...")
@@ -320,7 +325,7 @@ def create_poster(city, country, point, dist, output_file):
     print(f"Saving to {output_file}...")
     plt.savefig(output_file, dpi=300, facecolor=THEME['bg'])
     plt.close()
-    print(f"✓ Done! Poster saved as {output_file}")
+    print(f"Done! Poster saved as {output_file}")
 
 def print_examples():
     """Print usage examples."""
@@ -418,7 +423,7 @@ Examples:
     
     parser.add_argument('--city', '-c', type=str, help='City name')
     parser.add_argument('--country', '-C', type=str, help='Country name')
-    parser.add_argument('--theme', '-t', type=str, default='feature_based', help='Theme name (default: feature_based)')
+    parser.add_argument('--theme', '-t', type=str, default=None, help='Theme name (default: generate all popular themes)')
     parser.add_argument('--distance', '-d', type=int, default=29000, help='Map radius in meters (default: 29000)')
     parser.add_argument('--list-themes', action='store_true', help='List all available themes')
     
@@ -440,32 +445,52 @@ Examples:
         print_examples()
         os.sys.exit(1)
     
-    # Validate theme exists
+    # Get available themes
     available_themes = get_available_themes()
-    if args.theme not in available_themes:
-        print(f"Error: Theme '{args.theme}' not found.")
-        print(f"Available themes: {', '.join(available_themes)}")
-        os.sys.exit(1)
+    
+    # Determine themes to generate
+    if args.theme is None:
+        themes_to_generate = ['noir', 'japanese_ink', 'contrast_zones', 'midnight_blue']
+    else:
+        themes_to_generate = [args.theme]
+    
+    # Validate themes
+    for theme in themes_to_generate:
+        if theme not in available_themes:
+            print(f"Error: Theme '{theme}' not found.")
+            print(f"Available themes: {', '.join(available_themes)}")
+            os.sys.exit(1)
     
     print("=" * 50)
     print("City Map Poster Generator")
     print("=" * 50)
     
-    # Load theme
-    THEME = load_theme(args.theme)
-    
-    # Get coordinates and generate poster
+    # Get coordinates once
     try:
         coords = get_coordinates(args.city, args.country)
-        output_file = generate_output_filename(args.city, args.theme)
-        create_poster(args.city, args.country, coords, args.distance, output_file)
-        
-        print("\n" + "=" * 50)
-        print("✓ Poster generation complete!")
-        print("=" * 50)
-        
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         os.sys.exit(1)
+    
+    # Generate posters for each theme
+    for theme_name in themes_to_generate:
+        print(f"\nGenerating poster with theme: {theme_name}")
+        
+        # Load theme
+        THEME = load_theme(theme_name)
+        
+        # Generate output file
+        output_file = generate_output_filename(args.city, theme_name, args.distance)
+        
+        # Create poster
+        try:
+            create_poster(args.city, args.country, coords, args.distance, output_file)
+        except Exception as e:
+            print(f"Error generating poster for theme {theme_name}: {e}")
+            continue
+    
+    print("\n" + "=" * 50)
+    print(f"Poster generation complete! Generated {len(themes_to_generate)} posters.")
+    print("=" * 50)
