@@ -10,6 +10,7 @@ import json
 import os
 from datetime import datetime
 import argparse
+import geopandas as gpd
 
 THEMES_DIR = "themes"
 FONTS_DIR = "fonts"
@@ -221,32 +222,58 @@ def get_coordinates(city, country):
 def create_poster(city, country, point, dist, output_file):
     print(f"\nGenerating map for {city}, {country}...")
     
+    # Create cache directory based on location
+    lat, lon = point
+    cache_key = f"{city.lower().replace(' ', '_')}_{lat:.4f}_{lon:.4f}_{dist}"
+    cache_dir = os.path.join("cache", cache_key)
+    os.makedirs(cache_dir, exist_ok=True)
+    
     # Progress bar for data fetching
     with tqdm(total=3, desc="Fetching map data", unit="step", bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
         # 1. Fetch Street Network
-        pbar.set_description("Downloading street network")
-        G = ox.graph_from_point(point, dist=dist, dist_type='bbox', network_type='all')
+        graph_file = os.path.join(cache_dir, "graph.graphml")
+        if os.path.exists(graph_file):
+            pbar.set_description("Loading cached street network")
+            G = ox.load_graphml(graph_file)
+        else:
+            pbar.set_description("Downloading street network")
+            G = ox.graph_from_point(point, dist=dist, dist_type='bbox', network_type='all')
+            ox.save_graphml(G, graph_file)
         pbar.update(1)
         time.sleep(0.5)  # Rate limit between requests
         
         # 2. Fetch Water Features
-        pbar.set_description("Downloading water features")
-        try:
-            water = ox.features_from_point(point, tags={'natural': 'water', 'waterway': 'riverbank'}, dist=dist)
-        except:
-            water = None
+        water_file = os.path.join(cache_dir, "water.geojson")
+        if os.path.exists(water_file):
+            pbar.set_description("Loading cached water features")
+            water = gpd.read_file(water_file)
+        else:
+            pbar.set_description("Downloading water features")
+            try:
+                water = ox.features_from_point(point, tags={'natural': 'water', 'waterway': 'riverbank'}, dist=dist)
+                if water is not None and not water.empty:
+                    water.to_file(water_file, driver='GeoJSON')
+            except:
+                water = None
         pbar.update(1)
         time.sleep(0.3)
         
         # 3. Fetch Parks
-        pbar.set_description("Downloading parks/green spaces")
-        try:
-            parks = ox.features_from_point(point, tags={'leisure': 'park', 'landuse': 'grass'}, dist=dist)
-        except:
-            parks = None
+        parks_file = os.path.join(cache_dir, "parks.geojson")
+        if os.path.exists(parks_file):
+            pbar.set_description("Loading cached parks/green spaces")
+            parks = gpd.read_file(parks_file)
+        else:
+            pbar.set_description("Downloading parks/green spaces")
+            try:
+                parks = ox.features_from_point(point, tags={'leisure': 'park', 'landuse': 'grass'}, dist=dist)
+                if parks is not None and not parks.empty:
+                    parks.to_file(parks_file, driver='GeoJSON')
+            except:
+                parks = None
         pbar.update(1)
     
-    print("All data downloaded successfully!")
+    print("All data loaded successfully!")
     
     # 2. Setup Plot
     print("Rendering map...")
