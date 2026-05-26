@@ -49,6 +49,11 @@ FILE_ENCODING = "utf-8"
 
 FONTS = load_fonts()
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 def _cache_path(key: str) -> str:
     """
@@ -494,6 +499,7 @@ def create_poster(
     display_city=None,
     display_country=None,
     fonts=None,
+    hide_text=False,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -512,6 +518,7 @@ def create_poster(
         height: Poster height in inches (default: 16)
         country_label: Optional override for country text on poster
         _name_label: Optional override for city name (unused, reserved for future use)
+        hide_text: Hide all poster text, including labels, coordinates, and attribution
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -682,7 +689,9 @@ def create_poster(
         )
 
     # --- BOTTOM TEXT ---
-    ax.text(
+    text_artists = []
+
+    text_artists.append(ax.text(
         0.5,
         0.14,
         spaced_city,
@@ -691,9 +700,9 @@ def create_poster(
         ha="center",
         fontproperties=font_main_adjusted,
         zorder=11,
-    )
+    ))
 
-    ax.text(
+    text_artists.append(ax.text(
         0.5,
         0.10,
         display_country.upper(),
@@ -702,7 +711,7 @@ def create_poster(
         ha="center",
         fontproperties=font_sub,
         zorder=11,
-    )
+    ))
 
     lat, lon = point
     coords = (
@@ -713,7 +722,7 @@ def create_poster(
     if lon < 0:
         coords = coords.replace("E", "W")
 
-    ax.text(
+    text_artists.append(ax.text(
         0.5,
         0.07,
         coords,
@@ -723,9 +732,9 @@ def create_poster(
         ha="center",
         fontproperties=font_coords,
         zorder=11,
-    )
+    ))
 
-    ax.plot(
+    separator_line = ax.plot(
         [0.4, 0.6],
         [0.125, 0.125],
         transform=ax.transAxes,
@@ -740,7 +749,7 @@ def create_poster(
     else:
         font_attr = FontProperties(family="monospace", size=8)
 
-    ax.text(
+    text_artists.append(ax.text(
         0.98,
         0.02,
         "© OpenStreetMap contributors",
@@ -751,7 +760,11 @@ def create_poster(
         va="bottom",
         fontproperties=font_attr,
         zorder=11,
-    )
+    ))
+
+    if hide_text:
+        for artist in [*text_artists, *separator_line]:
+            artist.remove()
 
     # 5. Save
     print(f"Saving to {output_file}...")
@@ -817,6 +830,7 @@ Options:
   --city, -c        City name (required)
   --country, -C     Country name (required)
   --country-label   Override country text displayed on poster
+  --hide-text       Hide all poster text
   --theme, -t       Theme name (default: terracotta)
   --all-themes      Generate posters for all themes
   --distance, -d    Map radius in meters (default: 18000)
@@ -893,6 +907,11 @@ Examples:
         dest="country_label",
         type=str,
         help="Override country text displayed on poster",
+    )
+    parser.add_argument(
+        "--hide-text",
+        action="store_true",
+        help="Hide all poster text, including labels, coordinates, and attribution",
     )
     parser.add_argument(
         "--theme",
@@ -1038,6 +1057,7 @@ Examples:
                 display_city=args.display_city,
                 display_country=args.display_country,
                 fonts=custom_fonts,
+                hide_text=args.hide_text,
             )
 
         print("\n" + "=" * 50)

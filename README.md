@@ -59,6 +59,20 @@ Otherwise (pip + venv):
 python create_map_poster.py --city <city> --country <country> [options]
 ```
 
+### Launch the GUI
+
+Use the GUI when you want selectable controls, live logs, and a button to open the generated posters folder:
+
+```bash
+python poster_gui.py
+```
+
+On Windows, if `python` is not on your PATH:
+
+```bash
+py poster_gui.py
+```
+
 ### Required Options
 
 | Option | Short | Description |
@@ -73,6 +87,7 @@ python create_map_poster.py --city <city> --country <country> [options]
 | **OPTIONAL:** `--latitude` | `-lat` | Override latitude center point (use with --longitude) | |
 | **OPTIONAL:** `--longitude` | `-long` | Override longitude center point (use with --latitude) | |
 | **OPTIONAL:** `--country-label` | | Override country text displayed on poster | |
+| **OPTIONAL:** `--hide-text` | | Hide all poster text, including city, country, coordinates, and attribution | false |
 | **OPTIONAL:** `--theme` | `-t` | Theme name | terracotta |
 | **OPTIONAL:** `--distance` | `-d` | Map radius in meters | 18000 |
 | **OPTIONAL:** `--list-themes` | | List all available themes | |
@@ -127,6 +142,9 @@ python create_map_poster.py -c "Paris" -C "France"
 
 # With custom theme and distance
 python create_map_poster.py -c "New York" -C "USA" -t noir -d 12000
+
+# Map only, with no text overlay
+python create_map_poster.py -c "Paris" -C "France" --hide-text
 ```
 
 #### Multilingual Examples (Non-Latin Scripts)
@@ -313,7 +331,7 @@ Quick reference for contributors who want to extend or modify the script.
 ### Rendering Layers (z-order)
 
 ```text
-z=11  Text labels (city, country, coords)
+z=11  Text labels (city, country, coords, attribution; hidden with --hide-text)
 z=10  Gradient fades (top & bottom)
 z=3   Roads (via ox.plot_graph)
 z=2   Parks (green polygons)
