@@ -88,7 +88,7 @@ py poster_gui.py
 | **OPTIONAL:** `--longitude` | `-long` | Override longitude center point (use with --latitude) | |
 | **OPTIONAL:** `--country-label` | | Override country text displayed on poster | |
 | **OPTIONAL:** `--hide-text` | | Hide all poster text, including city, country, coordinates, and attribution | false |
-| **OPTIONAL:** `--transparent-background` | | Save without the theme background fill | false |
+| **OPTIONAL:** `--transparent-background` | | Save without theme background, water fill, or fades | false |
 | **OPTIONAL:** `--theme` | `-t` | Theme name | terracotta |
 | **OPTIONAL:** `--distance` | `-d` | Map radius in meters | 18000 |
 | **OPTIONAL:** `--list-themes` | | List all available themes | |

@@ -520,7 +520,7 @@ def create_poster(
         country_label: Optional override for country text on poster
         _name_label: Optional override for city name (unused, reserved for future use)
         hide_text: Hide all poster text, including labels, coordinates, and attribution
-        transparent_background: Save the poster without a theme background fill
+        transparent_background: Save without theme background, water fill, or fades
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -585,7 +585,7 @@ def create_poster(
 
     # 3. Plot Layers
     # Layer 1: Polygons (filter to only plot polygon/multipolygon geometries, not points)
-    if water is not None and not water.empty:
+    if not transparent_background and water is not None and not water.empty:
         # Filter to only polygon/multipolygon geometries to avoid point features showing as dots
         water_polys = water[water.geometry.type.isin(["Polygon", "MultiPolygon"])]
         if not water_polys.empty:
@@ -842,7 +842,7 @@ Options:
   --country-label   Override country text displayed on poster
   --hide-text       Hide all poster text
   --transparent-background
-                    Save without the theme background fill
+                    Save without theme background, water fill, or fades
   --theme, -t       Theme name (default: terracotta)
   --all-themes      Generate posters for all themes
   --distance, -d    Map radius in meters (default: 18000)
@@ -928,7 +928,7 @@ Examples:
     parser.add_argument(
         "--transparent-background",
         action="store_true",
-        help="Save without the theme background fill",
+        help="Save without theme background, water fill, or fades",
     )
     parser.add_argument(
         "--theme",

@@ -107,8 +107,8 @@ class PosterGeneratorGui:
         self.log_queue: queue.Queue[tuple[str, str | int | None]] = queue.Queue()
         self.process: subprocess.Popen[str] | None = None
 
-        self.city = StringVar(value="Paris")
-        self.country = StringVar(value="France")
+        self.city = StringVar(value="New York")
+        self.country = StringVar(value="USA")
         self.latitude = StringVar()
         self.longitude = StringVar()
         self.country_label = StringVar()
@@ -282,7 +282,7 @@ class PosterGeneratorGui:
         transparent_background_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=3)
         ToolTip(
             transparent_background_check,
-            "Saves without the theme background fill. Roads, water, parks, and text remain visible.",
+            "Saves without the theme background fill, water fill, or gradient fades.",
         )
 
         self.add_labeled_entry(
