@@ -61,7 +61,7 @@ python create_map_poster.py --city <city> --country <country> [options]
 
 ### Launch the GUI
 
-Use the GUI when you want selectable controls, live logs, and a button to open the generated posters folder:
+Use the GUI when you want selectable controls, resolution presets, live logs, and a button to open the generated posters folder:
 
 ```bash
 python poster_gui.py

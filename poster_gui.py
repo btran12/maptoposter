@@ -42,6 +42,20 @@ POSTERS_DIR = APP_DIR / "posters"
 TOOLTIP_BG = "#ffffe0"
 TOOLTIP_FG = "#222222"
 TOOLTIP_WRAP = 300
+DEFAULT_WIDTH = 12.0
+DEFAULT_HEIGHT = 16.0
+RESOLUTION_PRESETS = {
+    "Custom": None,
+    "Instagram Post - 1080 x 1080": (3.6, 3.6),
+    "Mobile Wallpaper - 1080 x 1920": (3.6, 6.4),
+    "HD Wallpaper - 1920 x 1080": (6.4, 3.6),
+    "4K Wallpaper - 3840 x 2160": (12.8, 7.2),
+    "A4 Print - 2480 x 3508": (8.3, 11.7),
+    "US Letter Print - 2550 x 3300": (8.5, 11.0),
+    "Square Print - 3600 x 3600": (12.0, 12.0),
+    "Portrait Poster - 3600 x 5400": (12.0, 18.0),
+    "Landscape Poster - 5400 x 3600": (18.0, 12.0),
+}
 
 
 class ToolTip:
@@ -105,10 +119,12 @@ class PosterGeneratorGui:
         self.all_themes = BooleanVar(value=False)
         self.hide_text = BooleanVar(value=False)
         self.distance = IntVar(value=18000)
-        self.width = DoubleVar(value=12.0)
-        self.height = DoubleVar(value=16.0)
+        self.width = DoubleVar(value=DEFAULT_WIDTH)
+        self.height = DoubleVar(value=DEFAULT_HEIGHT)
+        self.resolution_preset = StringVar(value="Custom")
         self.output_format = StringVar(value="png")
         self.status = StringVar(value="Ready")
+        self.updating_size_from_preset = False
 
         self.theme_names = self.load_themes()
         if self.theme_names:
@@ -171,11 +187,14 @@ class PosterGeneratorGui:
             self.display_country,
             self.font_family,
             self.theme,
+            self.resolution_preset,
             self.output_format,
         ]:
             variable.trace_add("write", lambda *_: self.update_command_preview())
         for variable in [self.all_themes, self.hide_text, self.distance, self.width, self.height]:
             variable.trace_add("write", lambda *_: self.update_command_preview())
+        self.width.trace_add("write", lambda *_: self.on_custom_size_changed())
+        self.height.trace_add("write", lambda *_: self.on_custom_size_changed())
 
     def build_location_section(self, parent: Frame) -> None:
         section = LabelFrame(parent, text="Location", padx=10, pady=10)
@@ -281,11 +300,26 @@ class PosterGeneratorGui:
         section.grid(row=2, column=0, sticky="ew", pady=(0, 10))
         section.columnconfigure(1, weight=1)
 
+        preset_help = "Choose a common target size. Custom keeps your manual width and height values."
+        preset_label = Label(section, text="Resolution preset")
+        preset_label.grid(row=0, column=0, sticky="w", pady=3)
+        preset_combo = ttk.Combobox(
+            section,
+            textvariable=self.resolution_preset,
+            values=list(RESOLUTION_PRESETS.keys()),
+            state="readonly",
+            width=28,
+        )
+        preset_combo.grid(row=0, column=1, sticky="ew", pady=3)
+        preset_combo.bind("<<ComboboxSelected>>", self.on_resolution_preset_changed)
+        ToolTip(preset_label, preset_help)
+        ToolTip(preset_combo, preset_help)
+
         self.add_labeled_spinbox(
             section,
             "Distance (m)",
             self.distance,
-            0,
+            2,
             1000,
             60000,
             500,
@@ -295,17 +329,17 @@ class PosterGeneratorGui:
             section,
             "Width (in)",
             self.width,
-            2,
+            4,
             1,
             20,
             0.1,
-            "Output width in inches. PNG files save at 300 DPI.",
+            "Output width in inches. PNG files save at 300 DPI, so 3.6 inches becomes 1080 pixels.",
         )
         self.add_labeled_spinbox(
             section,
             "Height (in)",
             self.height,
-            4,
+            6,
             1,
             20,
             0.1,
@@ -314,10 +348,10 @@ class PosterGeneratorGui:
 
         format_help = "PNG is best for previews; SVG and PDF are useful for print workflows."
         format_label = Label(section, text="Format")
-        format_label.grid(row=6, column=0, sticky="w", pady=3)
+        format_label.grid(row=8, column=0, sticky="w", pady=3)
         ToolTip(format_label, format_help)
         formats = Frame(section)
-        formats.grid(row=6, column=1, sticky="w", pady=3)
+        formats.grid(row=8, column=1, sticky="w", pady=3)
         for value in ["png", "svg", "pdf"]:
             radio = Radiobutton(
                 formats,
@@ -393,6 +427,26 @@ class PosterGeneratorGui:
         state = "disabled" if self.all_themes.get() else "readonly"
         self.theme_combo.configure(state=state)
         self.update_command_preview()
+
+    def on_resolution_preset_changed(self, _event=None) -> None:
+        size = RESOLUTION_PRESETS.get(self.resolution_preset.get())
+        if size is None:
+            size = (DEFAULT_WIDTH, DEFAULT_HEIGHT)
+
+        width, height = size
+        self.updating_size_from_preset = True
+        try:
+            self.width.set(width)
+            self.height.set(height)
+        finally:
+            self.updating_size_from_preset = False
+        self.update_command_preview()
+
+    def on_custom_size_changed(self) -> None:
+        if self.updating_size_from_preset:
+            return
+        if self.resolution_preset.get() != "Custom":
+            self.resolution_preset.set("Custom")
 
     def build_command(self) -> list[str]:
         command = [
