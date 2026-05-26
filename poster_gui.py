@@ -118,6 +118,7 @@ class PosterGeneratorGui:
         self.theme = StringVar()
         self.all_themes = BooleanVar(value=False)
         self.hide_text = BooleanVar(value=False)
+        self.transparent_background = BooleanVar(value=False)
         self.distance = IntVar(value=18000)
         self.width = DoubleVar(value=DEFAULT_WIDTH)
         self.height = DoubleVar(value=DEFAULT_HEIGHT)
@@ -191,7 +192,14 @@ class PosterGeneratorGui:
             self.output_format,
         ]:
             variable.trace_add("write", lambda *_: self.update_command_preview())
-        for variable in [self.all_themes, self.hide_text, self.distance, self.width, self.height]:
+        for variable in [
+            self.all_themes,
+            self.hide_text,
+            self.transparent_background,
+            self.distance,
+            self.width,
+            self.height,
+        ]:
             variable.trace_add("write", lambda *_: self.update_command_preview())
         self.width.trace_add("write", lambda *_: self.on_custom_size_changed())
         self.height.trace_add("write", lambda *_: self.on_custom_size_changed())
@@ -266,32 +274,43 @@ class PosterGeneratorGui:
         hide_text_check.grid(row=4, column=0, columnspan=2, sticky="w", pady=3)
         ToolTip(hide_text_check, "Removes city, country, coordinates, separator line, and attribution.")
 
+        transparent_background_check = Checkbutton(
+            section,
+            text="Transparent background",
+            variable=self.transparent_background,
+        )
+        transparent_background_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=3)
+        ToolTip(
+            transparent_background_check,
+            "Saves without the theme background fill. Roads, water, parks, and text remain visible.",
+        )
+
         self.add_labeled_entry(
             section,
             "Country label",
             self.country_label,
-            6,
+            7,
             "Optional replacement for the country text shown on the poster.",
         )
         self.add_labeled_entry(
             section,
             "Display city",
             self.display_city,
-            8,
+            9,
             "Optional poster text. Useful for local names or non-Latin scripts.",
         )
         self.add_labeled_entry(
             section,
             "Display country",
             self.display_country,
-            10,
+            11,
             "Optional poster country text, independent from the geocoding country.",
         )
         self.add_labeled_entry(
             section,
             "Font family",
             self.font_family,
-            12,
+            13,
             'Optional Google Fonts family, for example "Noto Sans JP" or "Cairo".',
         )
 
@@ -487,6 +506,8 @@ class PosterGeneratorGui:
 
         if self.hide_text.get():
             command.append("--hide-text")
+        if self.transparent_background.get():
+            command.append("--transparent-background")
 
         return command
 

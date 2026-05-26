@@ -500,6 +500,7 @@ def create_poster(
     display_country=None,
     fonts=None,
     hide_text=False,
+    transparent_background=False,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -519,6 +520,7 @@ def create_poster(
         country_label: Optional override for country text on poster
         _name_label: Optional override for city name (unused, reserved for future use)
         hide_text: Hide all poster text, including labels, coordinates, and attribution
+        transparent_background: Save the poster without a theme background fill
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -569,9 +571,14 @@ def create_poster(
 
     # 2. Setup Plot
     print("Rendering map...")
-    fig, ax = plt.subplots(figsize=(width, height), facecolor=THEME["bg"])
-    ax.set_facecolor(THEME["bg"])
+    figure_facecolor = "none" if transparent_background else THEME["bg"]
+    graph_bgcolor = (0, 0, 0, 0) if transparent_background else THEME["bg"]
+    fig, ax = plt.subplots(figsize=(width, height), facecolor=figure_facecolor)
+    ax.set_facecolor(graph_bgcolor)
     ax.set_position((0.0, 0.0, 1.0, 1.0))
+    if transparent_background:
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
 
     # Project graph to a metric CRS so distances and aspect are linear (meters)
     g_proj = ox.project_graph(g)
@@ -608,7 +615,7 @@ def create_poster(
     crop_xlim, crop_ylim = get_crop_limits(g_proj, point, fig, compensated_dist)
     # Plot the projected graph and then apply the cropped limits
     ox.plot_graph(
-        g_proj, ax=ax, bgcolor=THEME['bg'],
+        g_proj, ax=ax, bgcolor=graph_bgcolor,
         node_size=0,
         edge_color=edge_colors,
         edge_linewidth=edge_widths,
@@ -620,8 +627,9 @@ def create_poster(
     ax.set_ylim(crop_ylim)
 
     # Layer 3: Gradients (Top and Bottom)
-    create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
-    create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
+    if not transparent_background:
+        create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
+        create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
 
     # Calculate scale factor based on smaller dimension (reference 12 inches)
     # This ensures text scales properly for both portrait and landscape orientations
@@ -771,10 +779,12 @@ def create_poster(
 
     fmt = output_format.lower()
     save_kwargs = dict(
-        facecolor=THEME["bg"],
         bbox_inches="tight",
         pad_inches=0.05,
+        transparent=transparent_background,
     )
+    if not transparent_background:
+        save_kwargs["facecolor"] = THEME["bg"]
 
     # DPI matters mainly for raster formats
     if fmt == "png":
@@ -831,6 +841,8 @@ Options:
   --country, -C     Country name (required)
   --country-label   Override country text displayed on poster
   --hide-text       Hide all poster text
+  --transparent-background
+                    Save without the theme background fill
   --theme, -t       Theme name (default: terracotta)
   --all-themes      Generate posters for all themes
   --distance, -d    Map radius in meters (default: 18000)
@@ -912,6 +924,11 @@ Examples:
         "--hide-text",
         action="store_true",
         help="Hide all poster text, including labels, coordinates, and attribution",
+    )
+    parser.add_argument(
+        "--transparent-background",
+        action="store_true",
+        help="Save without the theme background fill",
     )
     parser.add_argument(
         "--theme",
@@ -1058,6 +1075,7 @@ Examples:
                 display_country=args.display_country,
                 fonts=custom_fonts,
                 hide_text=args.hide_text,
+                transparent_background=args.transparent_background,
             )
 
         print("\n" + "=" * 50)

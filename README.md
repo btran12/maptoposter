@@ -88,6 +88,7 @@ py poster_gui.py
 | **OPTIONAL:** `--longitude` | `-long` | Override longitude center point (use with --latitude) | |
 | **OPTIONAL:** `--country-label` | | Override country text displayed on poster | |
 | **OPTIONAL:** `--hide-text` | | Hide all poster text, including city, country, coordinates, and attribution | false |
+| **OPTIONAL:** `--transparent-background` | | Save without the theme background fill | false |
 | **OPTIONAL:** `--theme` | `-t` | Theme name | terracotta |
 | **OPTIONAL:** `--distance` | `-d` | Map radius in meters | 18000 |
 | **OPTIONAL:** `--list-themes` | | List all available themes | |
@@ -145,6 +146,9 @@ python create_map_poster.py -c "New York" -C "USA" -t noir -d 12000
 
 # Map only, with no text overlay
 python create_map_poster.py -c "Paris" -C "France" --hide-text
+
+# Transparent background
+python create_map_poster.py -c "Paris" -C "France" --transparent-background
 ```
 
 #### Multilingual Examples (Non-Latin Scripts)
