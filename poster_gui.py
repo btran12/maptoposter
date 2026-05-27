@@ -119,6 +119,7 @@ class PosterGeneratorGui:
         self.all_themes = BooleanVar(value=False)
         self.hide_text = BooleanVar(value=False)
         self.transparent_background = BooleanVar(value=False)
+        self.disable_fade = BooleanVar(value=False)
         self.distance = IntVar(value=18000)
         self.width = DoubleVar(value=DEFAULT_WIDTH)
         self.height = DoubleVar(value=DEFAULT_HEIGHT)
@@ -196,6 +197,7 @@ class PosterGeneratorGui:
             self.all_themes,
             self.hide_text,
             self.transparent_background,
+            self.disable_fade,
             self.distance,
             self.width,
             self.height,
@@ -283,6 +285,17 @@ class PosterGeneratorGui:
         ToolTip(
             transparent_background_check,
             "Saves without the theme background fill, water fill, or gradient fades.",
+        )
+
+        disable_fade_check = Checkbutton(
+            section,
+            text="Remove fade overlay",
+            variable=self.disable_fade,
+        )
+        disable_fade_check.grid(row=6, column=0, columnspan=2, sticky="w", pady=3)
+        ToolTip(
+            disable_fade_check,
+            "Saves the poster without the top/bottom gradient fade overlay.",
         )
 
         self.add_labeled_entry(
@@ -508,6 +521,8 @@ class PosterGeneratorGui:
             command.append("--hide-text")
         if self.transparent_background.get():
             command.append("--transparent-background")
+        if self.disable_fade.get():
+            command.append("--no-fade")
 
         return command
 

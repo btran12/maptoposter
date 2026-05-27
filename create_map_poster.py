@@ -501,6 +501,7 @@ def create_poster(
     fonts=None,
     hide_text=False,
     transparent_background=False,
+    disable_fade=False,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -521,6 +522,7 @@ def create_poster(
         _name_label: Optional override for city name (unused, reserved for future use)
         hide_text: Hide all poster text, including labels, coordinates, and attribution
         transparent_background: Save without theme background, water fill, or fades
+        disable_fade: Skip the top/bottom fade overlay while keeping other layers
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -627,7 +629,7 @@ def create_poster(
     ax.set_ylim(crop_ylim)
 
     # Layer 3: Gradients (Top and Bottom)
-    if not transparent_background:
+    if not transparent_background and not disable_fade:
         create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
         create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
 
@@ -843,6 +845,7 @@ Options:
   --hide-text       Hide all poster text
   --transparent-background
                     Save without theme background, water fill, or fades
+  --no-fade         Save without the top/bottom fade overlay
   --theme, -t       Theme name (default: terracotta)
   --all-themes      Generate posters for all themes
   --distance, -d    Map radius in meters (default: 18000)
@@ -929,6 +932,12 @@ Examples:
         "--transparent-background",
         action="store_true",
         help="Save without theme background, water fill, or fades",
+    )
+    parser.add_argument(
+        "--no-fade",
+        action="store_true",
+        dest="no_fade",
+        help="Save without the top/bottom fade overlay",
     )
     parser.add_argument(
         "--theme",
@@ -1076,6 +1085,7 @@ Examples:
                 fonts=custom_fonts,
                 hide_text=args.hide_text,
                 transparent_background=args.transparent_background,
+                disable_fade=args.no_fade,
             )
 
         print("\n" + "=" * 50)
