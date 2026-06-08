@@ -12,6 +12,7 @@ import asyncio
 import json
 import os
 import pickle
+import re
 import sys
 import time
 from datetime import datetime
@@ -111,6 +112,50 @@ def cache_set(key: str, value):
             pickle.dump(value, f, protocol=pickle.HIGHEST_PROTOCOL)
     except Exception as e:
         raise CacheError(f"Cache write failed: {e}") from e
+
+
+def optimize_svg_file(output_path: str) -> None:
+    """Optimize an SVG file to reduce its size by stripping comments and extra whitespace."""
+    try:
+        svg_text = Path(output_path).read_text(encoding=FILE_ENCODING)
+    except OSError as e:
+        print(f"⚠ SVG optimization skipped: could not read {output_path}: {e}")
+        return
+
+    # Remove comments first, then collapse whitespace inside tags only.
+    svg_text = re.sub(r"<!--.*?-->", "", svg_text, flags=re.DOTALL)
+
+    optimized_chars = []
+    in_tag = False
+    last_was_space = False
+    for char in svg_text:
+        if char == "<":
+            in_tag = True
+            last_was_space = False
+            optimized_chars.append(char)
+        elif char == ">":
+            in_tag = False
+            last_was_space = False
+            optimized_chars.append(char)
+        elif in_tag:
+            if char.isspace():
+                if not last_was_space:
+                    optimized_chars.append(" ")
+                    last_was_space = True
+            else:
+                optimized_chars.append(char)
+                last_was_space = False
+        else:
+            optimized_chars.append(char)
+
+    optimized_svg = "".join(optimized_chars)
+    optimized_svg = re.sub(r">\s+<", "><", optimized_svg)
+    optimized_svg = re.sub(r"\n\s*\n", "\n", optimized_svg)
+
+    try:
+        Path(output_path).write_text(optimized_svg, encoding=FILE_ENCODING)
+    except OSError as e:
+        print(f"⚠ SVG optimization skipped: could not write optimized file {output_path}: {e}")
 
 
 # Font loading now handled by font_management.py module
@@ -502,6 +547,7 @@ def create_poster(
     hide_text=False,
     transparent_background=False,
     disable_fade=False,
+    optimize_svg=False,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -523,6 +569,7 @@ def create_poster(
         hide_text: Hide all poster text, including labels, coordinates, and attribution
         transparent_background: Save without theme background, water fill, or fades
         disable_fade: Skip the top/bottom fade overlay while keeping other layers
+        optimize_svg: Minify SVG output by stripping comments and extra whitespace
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -794,6 +841,10 @@ def create_poster(
 
     plt.savefig(output_file, format=fmt, **save_kwargs)
 
+    if fmt == "svg" and optimize_svg:
+        optimize_svg_file(output_file)
+        print(f"✓ SVG optimized: {output_file}")
+
     plt.close()
     print(f"✓ Done! Poster saved as {output_file}")
 
@@ -850,6 +901,7 @@ Options:
   --all-themes      Generate posters for all themes
   --distance, -d    Map radius in meters (default: 18000)
   --list-themes     List all available themes
+  --svg-optimize    Optimize generated SVG output to reduce file size
 
 Distance guide:
   4000-6000m   Small/dense cities (Venice, Amsterdam old center)
@@ -1001,6 +1053,11 @@ Examples:
         choices=["png", "svg", "pdf"],
         help="Output format for the poster (default: png)",
     )
+    parser.add_argument(
+        "--svg-optimize",
+        action="store_true",
+        help="Optimize generated SVG output to reduce file size (only applies to svg format)",
+    )
 
     args = parser.parse_args()
 
@@ -1086,6 +1143,7 @@ Examples:
                 hide_text=args.hide_text,
                 transparent_background=args.transparent_background,
                 disable_fade=args.no_fade,
+                optimize_svg=args.svg_optimize,
             )
 
         print("\n" + "=" * 50)

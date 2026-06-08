@@ -120,6 +120,7 @@ class PosterGeneratorGui:
         self.hide_text = BooleanVar(value=False)
         self.transparent_background = BooleanVar(value=False)
         self.disable_fade = BooleanVar(value=False)
+        self.svg_optimize = BooleanVar(value=False)
         self.distance = IntVar(value=18000)
         self.width = DoubleVar(value=DEFAULT_WIDTH)
         self.height = DoubleVar(value=DEFAULT_HEIGHT)
@@ -191,6 +192,7 @@ class PosterGeneratorGui:
             self.theme,
             self.resolution_preset,
             self.output_format,
+            self.svg_optimize,
         ]:
             variable.trace_add("write", lambda *_: self.update_command_preview())
         for variable in [
@@ -205,6 +207,7 @@ class PosterGeneratorGui:
             variable.trace_add("write", lambda *_: self.update_command_preview())
         self.width.trace_add("write", lambda *_: self.on_custom_size_changed())
         self.height.trace_add("write", lambda *_: self.on_custom_size_changed())
+        self.output_format.trace_add("write", lambda *_: self.on_output_format_changed())
 
     def build_location_section(self, parent: Frame) -> None:
         section = LabelFrame(parent, text="Location", padx=10, pady=10)
@@ -394,6 +397,18 @@ class PosterGeneratorGui:
             radio.pack(side="left", padx=(0, 12))
             ToolTip(radio, format_help)
 
+        self.svg_optimize_check = Checkbutton(
+            section,
+            text="Optimize SVG output",
+            variable=self.svg_optimize,
+            state="disabled",
+        )
+        self.svg_optimize_check.grid(row=9, column=1, sticky="w", pady=(3, 0))
+        ToolTip(
+            self.svg_optimize_check,
+            "Minify generated SVG output to reduce file size. Only applies when SVG is selected.",
+        )
+
     def build_actions(self, parent: Frame) -> None:
         section = Frame(parent)
         section.grid(row=3, column=0, sticky="ew")
@@ -480,6 +495,13 @@ class PosterGeneratorGui:
         if self.resolution_preset.get() != "Custom":
             self.resolution_preset.set("Custom")
 
+    def on_output_format_changed(self) -> None:
+        if self.output_format.get() == "svg":
+            self.svg_optimize_check.configure(state="normal")
+        else:
+            self.svg_optimize.set(False)
+            self.svg_optimize_check.configure(state="disabled")
+
     def build_command(self) -> list[str]:
         command = [
             sys.executable,
@@ -523,6 +545,8 @@ class PosterGeneratorGui:
             command.append("--transparent-background")
         if self.disable_fade.get():
             command.append("--no-fade")
+        if self.svg_optimize.get() and self.output_format.get() == "svg":
+            command.append("--svg-optimize")
 
         return command
 
